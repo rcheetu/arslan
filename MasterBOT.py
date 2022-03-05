@@ -3,6 +3,7 @@ import re
 import sys
 import time
 import paramiko
+from pssh.clients import ParallelSSHClient
 
 
 port = 22
@@ -13,20 +14,33 @@ ssh_session = []
 
 
 def Connect(hosts, port, username):
-    global ssh_session
-    for host in hosts :
-        ssh = paramiko.SSHClient()
-        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        try:
-            print ("[+] Connecting To ", host, " ... ",)
-            # ssh.connect(host, port, username, password)
-            ssh.connect(host, username=username, key_filename=rsa_path)
-            print ("Connected")
-        except paramiko.SSHException:
-            print ("ERROR\n[!]Connection To ", host, " Failed")
-        except:
-            print ("ERROR\n[!!] Unknown error [!!]")
-        ssh_session += [ssh]
+    client = ParallelSSHClient(hosts=hosts, user=username, pkey=rsa_path)
+    out = []
+    try:
+        out = client.run_command("sudo python2.7 Mailer.py", read_timeout=3)
+    except Exception as e:
+        print("run_command error: ", e)
+    for host_out in out:
+        if host_out.stderr is not None:
+            for line in host_out.stderr:
+                print(line)
+        if host_out.stdout is not None:
+            for line in host_out.stdout:
+                print(line)
+#     global ssh_session
+#     for host in hosts :
+#         ssh = paramiko.SSHClient()
+#         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+#         try:
+#             print ("[+] Connecting To ", host, " ... ",)
+#             # ssh.connect(host, port, username, password)
+#             ssh.connect(host, username=username, key_filename=rsa_path)
+#             print ("Connected")
+#         except paramiko.SSHException:
+#             print ("ERROR\n[!]Connection To ", host, " Failed")
+#         except:
+#             print ("ERROR\n[!!] Unknown error [!!]")
+#         ssh_session += [ssh]
 
 def excecute_cmd(cmd,ssh):
     print ("[+] Excecuting ", cmd, " ...",)
@@ -155,15 +169,15 @@ for  i, session in enumerate(ssh_session):
         print ("[+] A Problem Detected  in ",servers[i]," !")
         print ("[+] ",str(e))
 
-for  i, session in enumerate(ssh_session):
-    try:
-        print ("[+] Excecuting the script on server ",servers[i],"  ",i+1,"/",len(servers))
-        result = excecute_cmd("sudo python2.7 Mailer.py",session)
-        Out = open(dirs[1]+"/"+servers[i]+".txt","w")
-        write(result,Out)
-        Out.close()
-        # session.close()
-    except Exception as e:
-        print ("[+] A Problem Detected  in ",servers[i]," !")
-        print ("[+] ",str(e))
+# for  i, session in enumerate(ssh_session):
+#     try:
+#         print ("[+] Excecuting the script on server ",servers[i],"  ",i+1,"/",len(servers))
+#         result = excecute_cmd("sudo python2.7 Mailer.py",session)
+#         Out = open(dirs[1]+"/"+servers[i]+".txt","w")
+#         write(result,Out)
+#         Out.close()
+#         # session.close()
+#     except Exception as e:
+#         print ("[+] A Problem Detected  in ",servers[i]," !")
+#         print ("[+] ",str(e))
 print ("[+] Done !")
